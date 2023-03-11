@@ -1,1 +1,3 @@
-# Spring-Boot-Micr-Service-Demo
+# Spring-Boot-Micro-Service-Demo
+
+# Uses Spring cloud
