@@ -26,7 +26,6 @@ public class OrderService {
         List<OrderLineItems> orderLineItems = orderRequestDto.getOrderLineItemsDtoList().stream()
                 .map(this::mapToDto).toList();
 
-
         order.setOrderLineItemsList(orderLineItems);
 
         orderRepository.save(order);
