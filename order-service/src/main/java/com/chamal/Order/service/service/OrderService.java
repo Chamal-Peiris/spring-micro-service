@@ -1,5 +1,6 @@
 package com.chamal.Order.service.service;
 
+import com.chamal.Order.service.dto.InventoryResponseDto;
 import com.chamal.Order.service.dto.OrderLineItemsDto;
 import com.chamal.Order.service.dto.OrderRequestDto;
 import com.chamal.Order.service.model.Order;
@@ -9,7 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -22,7 +25,9 @@ public class OrderService {
     @Autowired
     OrderRepository orderRepository;
 
-    public void PlaceOrder(OrderRequestDto orderRequestDto){
+    @Autowired
+    WebClient webClient;
+    public void PlaceOrder(OrderRequestDto orderRequestDto) throws IllegalAccessException {
         Order order = new Order();
         order.setOrderNumber(UUID.randomUUID().toString());
 
@@ -31,7 +36,24 @@ public class OrderService {
 
         order.setOrderLineItemsList(orderLineItems);
 
-        orderRepository.save(order);
+        List<String> skuCodes = order.getOrderLineItemsList().stream().map(orderLineItem -> orderLineItem.getSkuCode()).toList();
+
+        // Call inventry service and place order if product is in stock
+
+        //Using webfulx to make async calls, (the block method will stop async calls and make it sync calls)
+        InventoryResponseDto[] iventoryResponseArray = webClient.get().uri("http://localhost:8082/api/inventory", uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
+                .retrieve()
+                .bodyToMono(InventoryResponseDto[].class)
+                .block();
+
+        boolean allProductsInStock = Arrays.stream(iventoryResponseArray).allMatch(InventoryResponseDto::isInStock);
+
+
+        if(allProductsInStock){
+          orderRepository.save(order);
+      }else{
+          throw new IllegalAccessException("Product is not in stick please try again later");
+      }
 
     }
 

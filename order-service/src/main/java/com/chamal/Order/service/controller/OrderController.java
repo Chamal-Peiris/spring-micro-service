@@ -14,7 +14,7 @@ public class OrderController {
     OrderService orderService;
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public String placeOrder(@RequestBody OrderRequestDto orderRequestDto){
+    public String placeOrder(@RequestBody OrderRequestDto orderRequestDto) throws IllegalAccessException {
         orderService.PlaceOrder(orderRequestDto);
         return "Order Saved Successfully";
     }
