@@ -41,7 +41,9 @@ public class OrderService {
         // Call inventry service and place order if product is in stock
 
         //Using webfulx to make async calls, (the block method will stop async calls and make it sync calls)
-        InventoryResponseDto[] iventoryResponseArray = webClient.get().uri("http://localhost:8082/api/inventory", uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
+
+        //replaced localhost with inventory service name (eureka handles the ip part)
+        InventoryResponseDto[] iventoryResponseArray = webClient.get().uri("http://inventory-service/api/inventory", uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
                 .retrieve()
                 .bodyToMono(InventoryResponseDto[].class)
                 .block();
