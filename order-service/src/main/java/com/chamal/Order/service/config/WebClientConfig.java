@@ -11,7 +11,7 @@ public class WebClientConfig {
     //add client side load balancing to the order service client
     @Bean
     @LoadBalanced
-    public WebClient.Builder webClient(){
+    public WebClient.Builder webClientBuilder(){
         return WebClient.builder();
     }
 }

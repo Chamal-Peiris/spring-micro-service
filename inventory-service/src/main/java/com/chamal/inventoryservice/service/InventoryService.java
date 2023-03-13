@@ -20,8 +20,7 @@ public class InventoryService {
     @Autowired
     InventoryRepository inventoryRepository;
     @Transactional(readOnly = true)
-    public List<InventoryResponseDto> isInStock(List<String> skuCode){
-
+    public List<InventoryResponseDto> isInStock(List<String> skuCode) {
         log.info("Checking Inventory");
         return inventoryRepository.findBySkuCodeIn(skuCode).stream()
                 .map(inventory ->
@@ -30,6 +29,5 @@ public class InventoryService {
                                 .isInStock(inventory.getQuantity() > 0)
                                 .build()
                 ).toList();
-
     }
 }

@@ -24,15 +24,14 @@ public class OrderService {
 
     @Autowired
     OrderRepository orderRepository;
-
     @Autowired
-    WebClient webClient;
+    WebClient.Builder webClientBuilder;
+
     public void PlaceOrder(OrderRequestDto orderRequestDto) throws IllegalAccessException {
         Order order = new Order();
         order.setOrderNumber(UUID.randomUUID().toString());
 
-        List<OrderLineItems> orderLineItems = orderRequestDto.getOrderLineItemsDtoList().stream()
-                .map(this::mapToDto).toList();
+        List<OrderLineItems> orderLineItems = orderRequestDto.getOrderLineItemsDtoList().stream().map(this::mapToDto).toList();
 
         order.setOrderLineItemsList(orderLineItems);
 
@@ -43,23 +42,20 @@ public class OrderService {
         //Using webfulx to make async calls, (the block method will stop async calls and make it sync calls)
 
         //replaced localhost with inventory service name (eureka handles the ip part)
-        InventoryResponseDto[] iventoryResponseArray = webClient.get().uri("http://inventory-service/api/inventory", uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
-                .retrieve()
-                .bodyToMono(InventoryResponseDto[].class)
-                .block();
+        InventoryResponseDto[] inventoryResponsArray = webClientBuilder.build().get().uri("http://inventory-service/api/inventory", uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build()).retrieve().bodyToMono(InventoryResponseDto[].class).block();
 
-        boolean allProductsInStock = Arrays.stream(iventoryResponseArray).allMatch(InventoryResponseDto::isInStock);
+        boolean allProductsInStock = Arrays.stream(inventoryResponsArray).allMatch(InventoryResponseDto::isInStock);
 
-
-        if(allProductsInStock){
-          orderRepository.save(order);
-      }else{
-          throw new IllegalAccessException("Product is not in stick please try again later");
-      }
+        //should be opposite
+        if (!allProductsInStock) {
+            orderRepository.save(order);
+        } else {
+            throw new IllegalAccessException("Product is not in stock please try again later");
+        }
 
     }
 
-    public OrderLineItems mapToDto(OrderLineItemsDto orderLineItemsDto){
+    public OrderLineItems mapToDto(OrderLineItemsDto orderLineItemsDto) {
 
         OrderLineItems orderLineItems = new OrderLineItems();
 
