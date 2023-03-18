@@ -3,6 +3,7 @@ package com.chamal.inventoryservice.service;
 import com.chamal.inventoryservice.dto.InventoryResponseDto;
 import com.chamal.inventoryservice.model.Inventory;
 import com.chamal.inventoryservice.repository.InventoryRepository;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,8 +21,9 @@ public class InventoryService {
     @Autowired
     InventoryRepository inventoryRepository;
     @Transactional(readOnly = true)
+    @SneakyThrows
     public List<InventoryResponseDto> isInStock(List<String> skuCode) {
-        log.info("Checking Inventory");
+
         return inventoryRepository.findBySkuCodeIn(skuCode).stream()
                 .map(inventory ->
                         InventoryResponseDto.builder()
