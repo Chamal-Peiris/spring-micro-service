@@ -8,6 +8,8 @@ import com.chamal.Order.service.model.OrderLineItems;
 import com.chamal.Order.service.repository.OrderRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.sleuth.Span;
+import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -27,6 +29,9 @@ public class OrderService {
     @Autowired
     WebClient.Builder webClientBuilder;
 
+    @Autowired
+    Tracer tracer;
+
     public String PlaceOrder(OrderRequestDto orderRequestDto) throws IllegalAccessException {
         Order order = new Order();
         order.setOrderNumber(UUID.randomUUID().toString());
@@ -42,17 +47,30 @@ public class OrderService {
         //Using webfulx to make async calls, (the block method will stop async calls and make it sync calls)
 
         //replaced localhost with inventory service name (eureka handles the ip part)
-        InventoryResponseDto[] inventoryResponsArray = webClientBuilder.build().get().uri("http://inventory-service/api/inventory", uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build()).retrieve().bodyToMono(InventoryResponseDto[].class).block();
 
-        boolean allProductsInStock = Arrays.stream(inventoryResponsArray).allMatch(InventoryResponseDto::isInStock);
+        log.info("Calling inventory service");
 
-        //should be opposite
-        if (!allProductsInStock) {
-            orderRepository.save(order);
-            return "Order placed successfully";
-        } else {
-            throw new IllegalAccessException("Product is not in stock please try again later");
+        Span inventoryServiceLookup = tracer.nextSpan().name("InventoryServiceLookup");
+
+        try (Tracer.SpanInScope spanInScope = tracer.withSpan(inventoryServiceLookup.start())) {
+            InventoryResponseDto[] inventoryResponsArray = webClientBuilder.build().get().uri("http://inventory-service/api/inventory", uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
+                    .retrieve().
+                    bodyToMono(InventoryResponseDto[].class).
+                    block();
+
+            boolean allProductsInStock = Arrays.stream(inventoryResponsArray).allMatch(InventoryResponseDto::isInStock);
+
+            //should be opposite
+            if (!allProductsInStock) {
+                orderRepository.save(order);
+                return "Order placed successfully";
+            } else {
+                throw new IllegalAccessException("Product is not in stock please try again later");
+            }
+        } finally {
+            inventoryServiceLookup.end();
         }
+
 
     }
 
